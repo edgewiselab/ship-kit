@@ -1,0 +1,1721 @@
+# Ship Kit: A build-and-launch field guide for AI-built apps
+
+> The standard pre-launch checks every AI-built app needs, cross-referenced against 200+ hard-won lessons from real production apps, then expanded into a pack you keep in every repo.
+
+Ship Kit is made by Edgewise Lab. It brings together the standard pre-launch checklist for AI-built apps and expands it with lessons drawn from a portfolio of real production apps (payments, voice-AI, marketing, internal tools) built with AI coding agents.
+
+Open **index.html** for the interactive, filterable version that saves your progress.
+
+## Legend
+
+**Priority:** 🔴 Launch blocker · 🟡 First week · 🟢 Nice to have · 🔵 Always-on (a standing rule, not a one-time gate)
+
+**Origin:** items are marked *Classic check* (a standard pre-launch check, kept), *Expanded* (a standard check corrected or expanded with a production learning), or *Added* (new, from Edgewise Lab's production experience).
+
+## At a glance
+
+113 checks across 12 sections.
+
+| Priority | Count |
+| --- | --- |
+| 🔴 Launch blocker | 29 |
+| 🟡 First week | 59 |
+| 🟢 Nice to have | 11 |
+| 🔵 Always-on | 14 |
+
+| Origin | Count |
+| --- | --- |
+| Classic check | 23 |
+| Expanded | 14 |
+| Added | 76 |
+
+| # | Section | Checks | Blockers |
+| --- | --- | --- | --- |
+| 01 | Foundations & AI Workflow | 10 | 2 |
+| 02 | Security & Access | 17 | 8 |
+| 03 | Data & Migrations | 10 | 1 |
+| 04 | Emails & Deliverability | 9 | 4 |
+| 05 | Findability (SEO) | 8 | 1 |
+| 06 | Speed & UX | 8 | 1 |
+| 07 | Analytics & Observability | 9 | 2 |
+| 08 | Legal & Compliance | 6 | 1 |
+| 09 | Payments | 7 | 2 |
+| 10 | Deploy & Release | 11 | 3 |
+| 11 | Testing & Launch Day | 10 | 4 |
+| 12 | Post-Launch & Operations | 8 | 0 |
+
+---
+
+## 1. Foundations & AI Workflow
+
+_Set before you write a line: safe AI habits, secrets kept out of the code, and environments kept apart._
+
+### `F1` Keep secrets out of git from the very first commit
+
+🔴 **Launch blocker** · Phase: Foundation · Added
+
+**What to check.** No secret file, API key, token, or password ever gets saved into git (your version history), not even in a private repo.
+
+**How.** Add .env* to your .gitignore before your first commit, and commit a .env.example that lists the names with blank values. To check nothing already slipped in, search your history: git log -p | grep -i 'key\|secret\|password'.
+
+**What bad looks like.** You inherit a codebase with a committed .env full of live keys and no .gitignore. Deleting the file is not enough: the key stays in the history forever.
+
+**Why it matters.** Anything committed is compromised. Deleting it only hides it; the key still lives in every copy of the repo and in git history.
+
+<sub>Where this comes from: a Supabase/Next.js app inherited a committed .env (P0); a voice-AI app had ADMIN_RESET_TOKEN committed in plaintext.</sub>
+
+### `F2` Separate prod, staging and dev, with their own data and keys
+
+🔴 **Launch blocker** · Phase: Foundation · Added
+
+**What to check.** Each environment (your live site, your test site, your local machine) has its own database and its own keys. None of them can touch another's users.
+
+**How.** On managed platforms (Vercel, Netlify, Replit): give your Preview and Production environments different values, use test or sandbox API keys in Preview and live keys only in Production, and never point a preview or dev build at your real production database. If you run your own server: never put live keys (payments, texts, email) on a test server that holds a copy of real customer data or runs scheduled jobs; keep test sends behind a sandbox flag with fake keys.
+
+**What bad looks like.** Your preview or test deploys use the same live keys and the same database as production, so a test signup emails or charges a real customer, or testing overwrites real data.
+
+**Why it matters.** A test server that mirrors real data and runs jobs is a loaded gun pointed at your customers.
+
+<sub>Where this comes from: a payments SaaS staging-safety practice.</sub>
+
+### `F3` Store secrets in your host's secrets settings, not in the code
+
+🟡 **First week** · Phase: Foundation · Added
+
+**What to check.** Your API keys, database passwords, and tokens live in your host's secrets or environment settings and load when the app runs. They are never written into the code or committed to git.
+
+**How.** On managed platforms (Replit, Vercel, Netlify, Supabase, Railway) there is a Secrets or Environment Variables panel: put them there. If you run your own server, use a secrets manager or a per-key store rather than one big plain-text file, so a single bad edit cannot wipe every secret at once.
+
+**What bad looks like.** An API key pasted straight into the code, or one giant secrets file where a single mistake wipes them all.
+
+**Why it matters.** Anything in the code or git history can leak; a proper secrets store keeps keys out of the codebase and easy to replace.
+
+<sub>Where this comes from: a payments SaaS secrets-storage incident.</sub>
+
+### `F4` Keep your AI project brief short, true, and current
+
+🔵 **Always-on** · Phase: Foundation · Added
+
+**What to check.** The first thing an AI coding agent reads each session: a short file (often called CLAUDE.md) that says what the project is, the tech stack, the commands to run, and the rules it must not break.
+
+**How.** Keep it concrete and checkable. Update it the moment the stack changes. Cut rules that are just generic defaults (like 'write clean code'), fix any contradictions, and remove vague lines. Split any file over 200 lines.
+
+**What bad looks like.** A project file still describing the old stack long after you rebuilt on a new one. It quietly misled every agent for a whole phase.
+
+**Why it matters.** Stale instructions are worse than none: a wrong project brief steers every agent wrong without anyone noticing.
+
+<sub>Where this comes from: a Supabase/Next.js app stale CLAUDE.md; a Claude Code cleanup kit context-audit.</sub>
+
+### `F5` Make auto-accept safe with a deny-list, not trust
+
+🔵 **Always-on** · Phase: Foundation · Added
+
+**What to check.** Before you let an AI coding agent run commands automatically (auto-accept), a saved deny-list blocks the commands that cannot be undone.
+
+**How.** In your agent's settings file (.claude/settings.json), deny the dangerous commands: rm -rf, sudo, git reset --hard, git clean, force-push, deleting a repo, and any change to production or secrets. An allow-list only removes approval prompts for convenience; the deny-list is your seatbelt. Never use the 'skip all permissions' flag for unattended runs, because it ignores the deny-list.
+
+**What bad looks like.** Running an overnight loop in 'skip all permissions' mode, which silently ignores your whole deny-list and removes every guardrail.
+
+**Why it matters.** Auto-accept can run hundreds of safe steps only because the destructive commands are hard-blocked.
+
+<sub>Where this comes from: a Claude Code loop kit settings.json; a payments SaaS launch-readiness (default mode, never bypass).</sub>
+
+### `F6` Define done as one machine gate, and never weaken it
+
+🔵 **Always-on** · Phase: Build · Added
+
+**What to check.** One command (type-check plus tests plus lint) is the single, objective test of whether the work is done. It must pass before anything is committed.
+
+**How.** Set up one 'verify' command. The rule that keeps an AI agent honest: fix the code, never the test. Never skip, weaken, or delete a test just to make it pass. Skipping a test is only okay if it is clearly marked as skipped.
+
+**What bad looks like.** A test quietly changed so it passes, or a failing check committed anyway. Now 'passing' means nothing.
+
+**Why it matters.** If the check can be gamed, it stops being a real definition of done.
+
+<sub>Where this comes from: a Claude Code loop kit loop/PROTOCOL.md.</sub>
+
+### `F7` Let an independent checker grade the work, not the maker
+
+🔵 **Always-on** · Phase: Build · Added
+
+**What to check.** A second AI agent reviews every change against the things tests cannot check, and assumes FAIL when it is unsure.
+
+**How.** Run a read-only 'reviewer' agent, ideally on a different and cheaper model. It checks input validation, code structure, data integrity, and whether each user can only reach their own data. A change ships only if both the automated check and this reviewer pass.
+
+**What bad looks like.** The same model that wrote the code also decides it is correct. It is the worst possible judge of its own blind spots.
+
+**Why it matters.** An independent reviewer catches real problems the maker's own tests were blind to.
+
+<sub>Where this comes from: a Claude Code loop kit diff-auditor.md; an AI lead tool (auditor caught 2 real cycles).</sub>
+
+### `F8` Commit but never push on unattended loops
+
+🔵 **Always-on** · Phase: Foundation · Added
+
+**What to check.** Overnight and hands-off runs save their work to a side branch, but a human reviews the changes before they go live.
+
+**How.** Block 'git push' in your personal, git-ignored settings file (settings.local.json), not the shared one, so your teammates can still push their own branches.
+
+**What bad looks like.** An unattended loop pushing straight to your main branch and triggering a deploy of code no human has read.
+
+**Why it matters.** Automation with no human between the change and your live site is how unreviewed work reaches production.
+
+<sub>Where this comes from: a Claude Code loop kit settings.local.example.json.</sub>
+
+### `F9` Pin cloud and git identity per project
+
+🟡 **First week** · Phase: Foundation · Added
+
+**What to check.** Each project is pinned to one specific cloud account and one GitHub account, instead of relying on whatever happens to be logged in globally.
+
+**How.** Set the account explicitly in the project's committed settings so it cannot drift. Before anything risky, check you are on the expected account (on AWS, aws sts get-caller-identity; on GitHub, gh auth status). If you self-host on another cloud, the same idea applies to its CLI.
+
+**What bad looks like.** Your GitHub CLI quietly switches to the wrong account and returns 'not found' on your own private repo, so a login problem looks like a missing feature. One wrong account is one command away from changing the wrong project.
+
+**Why it matters.** Logging in can rewrite your default account and switch every repo at once. Whatever is 'globally logged in' will silently serve the wrong credentials.
+
+<sub>Where this comes from: a Next.js + AWS app account-pinning; a Supabase/Next.js app github-accounts; a personal lab.</sub>
+
+### `F10` Put a spending cap or billing alert in place
+
+🟡 **First week** · Phase: Foundation · Added
+
+**What to check.** You have a spending limit or billing alert on anything that charges by usage: your host, your database, and any AI or paid API. That way a spike or a bug cannot run up a surprise bill.
+
+**How.** Turn on a billing alert in your host and provider settings. For pay-per-use AI (OpenAI, Anthropic), set a hard monthly spend limit in the provider's dashboard. Know what your free tier does when you go over: some cut you off, some start charging.
+
+**What bad looks like.** Waking up to a huge bill because a loop, a bot, or a launch-day traffic spike hammered a pay-per-use service with no cap.
+
+**Why it matters.** Usage-based pricing is a launch input, not an afterthought; a cap turns a runaway bill into a stopped service.
+
+<sub>Where this comes from: a Supabase/Next.js app cost-sensitivity; metered-AI spend limits.</sub>
+
+---
+
+## 2. Security & Access
+
+_The real check happens on the server. Anything in the browser can be bypassed._
+
+### `S1` Lock down your database so strangers cannot read it
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** A stranger who has your app's web address cannot read or write your database. Every table that holds user data is locked down.
+
+**How.** On Supabase, turn on RLS (Row Level Security, a database setting that only lets each user touch their own rows) for every table, with policies that enforce it, and never a policy that allows everyone. On Firebase, lock your rules. On Convex, make every query and mutation check who is logged in. If you turn RLS off for portability, checking user_id in your app code becomes the ONLY thing protecting the data, with nothing behind it, so test it as if you were attacking it.
+
+**What bad looks like.** You ask your AI tool and it answers: RLS is not enabled on table X. Right now, anyone can read every row in it.
+
+**Why it matters.** This is the number one way AI-built apps get hacked. One unprotected table leaks everything on day one.
+
+**Paste into your AI tool:**
+
+```text
+Check my database is protected from public access. If Supabase: is RLS enabled on EVERY table with user data, with policies so users only read/write their own rows? If Firebase: are rules locked or world-readable? Show exactly which tables/collections are unprotected.
+```
+
+<sub>Where this comes from: Standard practice; extended by a Supabase/Next.js app supabase-conventions and a payments SaaS user_id scoping.</sub>
+
+### `S2` Filter every database query by the logged-in user
+
+🔴 **Launch blocker** · Phase: Build · Added
+
+**What to check.** Every function that reads, updates, or deletes a record takes the user's id and includes 'and this row belongs to that user' right in the database query. The surrounding code also double-checks ownership.
+
+**How.** Put the ownership check into the query itself, and still confirm in your code that the record belongs to the logged-in user (two layers). Always use safe query placeholders; never build a query by gluing user input into a string.
+
+**What bad looks like.** A lookup that takes only a record id. Any logged-in user who knows or guesses an id can read or edit someone else's data. This is called IDOR (reaching another user's records by changing the id).
+
+**Why it matters.** A check in only one place is skipped the moment another part of the code forgets it. The query's own condition never forgets.
+
+<sub>Where this comes from: a payments SaaS security audit (23 call sites fixed); a payments SaaS a data-access method IDOR; a review-skill library backend-reviewer.</sub>
+
+### `S3` Enforce login and paywall on the server
+
+🔴 **Launch blocker** · Phase: Pre-launch · Classic check
+
+**What to check.** Every paid feature and logged-in page is enforced on the server, not just hidden in the browser.
+
+**How.** For every API route and database function that returns user data or paid features, check who is logged in and what plan they are on before returning anything. Treat the checks in the browser as polish, not security.
+
+**What bad looks like.** An API route that returns paid data without checking who is asking. Hiding the button does nothing.
+
+**Why it matters.** If protection only lives in the browser, anyone who opens the browser's developer tools gets it for free (this is how one app's paywall was bypassed in public).
+
+**Paste into your AI tool:**
+
+```text
+Check my app for client-side-only protection. For every premium feature and logged-in-only page: is the check enforced on the server (API route, DB rule, or middleware), or only in the frontend? Flag anything a user could reach by calling the API directly.
+```
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `S4` No guessable IDs for private resources without an ownership check
+
+🔴 **Launch blocker** · Phase: Build · Added
+
+**What to check.** Simple counting IDs (1, 2, 3) on private records are not protection. Every fetch confirms the person asking owns that record.
+
+**How.** Use hard-to-guess IDs (UUIDs) for anything private, and still check ownership when it is read. Pay special attention to routes that stream or download a file by id.
+
+**What bad looks like.** A route like GET /interviews/:id/audio that streams a person's voice recording by a simple counting id, with no login check on the route at all.
+
+**Why it matters.** Guessable ids plus a missing ownership check is the classic hole (IDOR): add one to the number and read someone else's data.
+
+<sub>Where this comes from: a voice-AI app audio-by-int-id; a review-skill library backend-reviewer IDOR checks.</sub>
+
+### `S5` Check that yourapp.com/.env shows nothing
+
+🔴 **Launch blocker** · Phase: Pre-launch · Classic check
+
+**What to check.** Your config files are not downloadable from the internet.
+
+**How.** Open yourapp.com/.env, /.env.local, /.env.production and /.git/config in a browser. Every one should show an error page, never file contents.
+
+**What bad looks like.** The browser shows DATABASE_URL=... and OPENAI_API_KEY=... in plain text. That is every secret you have, public.
+
+**Why it matters.** Bots scan every new domain for exactly these paths within hours. If a file showed contents, replace every key in it today.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `S6` Keep secret keys out of the frontend, and internal fields out of API responses
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** Only variables you have marked as public reach the browser. API responses return a chosen, tidy shape, not the raw database row.
+
+**How.** Use your framework's naming rule so only clearly public variables are sent to the browser (for example, only names starting with NEXT_PUBLIC_ or VITE_). Build each response through a function that returns just the safe fields, instead of handing back the whole row with internal tokens and third-party customer ids.
+
+**What bad looks like.** A user endpoint that returns the entire database row, including internal tokens and payment-provider customer ids.
+
+**Why it matters.** Anything in the browser bundle or the JSON response can be read by anyone. A naming rule plus a response builder makes the safe path the default.
+
+<sub>Where this comes from: Standard practice; a Supabase/Next.js app prefix convention; a payments SaaS toPublicUser.</sub>
+
+### `S7` Rotate any secret that was ever committed, leaked, or seen in a transcript
+
+🔴 **Launch blocker** · Phase: Pre-launch · Added
+
+**What to check.** The moment a secret shows up anywhere it should not, you treat it as stolen and replace it (rotate it).
+
+**How.** Generate a new key in the service's dashboard and retire the old one. Do the money keys first (Stripe), then database, login, and messaging keys. If it was committed to git, scrub it from the history and force-push; do not just delete the file.
+
+**What bad looks like.** A key deleted from your current files but left behind in git history, or replaced in one place but not the other.
+
+**Why it matters.** Real leaks have forced full replacements: an error message that dumped a whole secret, and an editor file that synced into a chat transcript.
+
+<sub>Where this comes from: a payments SaaS secrets-exposed; a voice-AI app committed admin token; a Supabase/Next.js app rotate-committed-keys.</sub>
+
+### `S8` Never edit a secrets file open in the Claude-connected IDE
+
+🔵 **Always-on** · Phase: Foundation · Added
+
+**What to check.** Secret values are never typed or opened anywhere an AI session can capture them.
+
+**How.** Edit your .env in a plain terminal editor, or send values straight to where they need to go. Treat any secret that ends up in an AI chat transcript as compromised.
+
+**What bad looks like.** A secrets file left open in the AI-connected code editor during a key change pushed the live API keys into the chat session, and all of them had to be replaced.
+
+**Why it matters.** An open file in an editor connected to an AI assistant can sync into the saved chat transcript.
+
+<sub>Where this comes from: a payments SaaS 2026-06-14 IDE-open-file leak.</sub>
+
+### `S9` Rotating a secret means both stores, then redeploy
+
+🔵 **Always-on** · Phase: Build · Added
+
+**What to check.** Replacing a secret means updating it in both places (your local .env and your production settings), then redeploying.
+
+**How.** Change it in both places, then trigger a deploy. Remember that secrets are read when the app starts up. If you self-host with a secrets store (for example AWS SSM), the same both-places rule applies.
+
+**What bad looks like.** Changing only your local copy (production still loads the old value), or changing production but not redeploying (nothing happens until the app restarts).
+
+**Why it matters.** Secrets load when the app boots, so replacing one without a redeploy does nothing.
+
+<sub>Where this comes from: a payments SaaS secret-rotation-sync.</sub>
+
+### `S10` Force HTTPS everywhere and test the SSL certificate
+
+🟡 **First week** · Phase: Pre-launch · Expanded
+
+**What to check.** Every page loads over https, plain http redirects to https, and the security certificate is valid.
+
+**How.** On managed platforms (Vercel, Netlify, and similar), https and the certificate are handled for you: just make sure both yourapp.com and www.yourapp.com work, and set your login base URL to the https address (login breaks over http). If you run your own server, get automatic certificates with a tool like Caddy plus Let's Encrypt.
+
+**What bad looks like.** A page that mixes http and https content, or login that never 'sticks' because the base URL is set to http.
+
+**Why it matters.** Without https your users' traffic can be read and changed in transit, and login flows quietly break.
+
+<sub>Where this comes from: Standard practice; a Supabase/Next.js app Caddy pattern.</sub>
+
+### `S11` Rate-limit expensive endpoints, and add a hard spend cap
+
+🟡 **First week** · Phase: Pre-launch · Expanded
+
+**What to check.** Your AI, email, and paid-API routes limit how often each user and each visitor can call them (rate limiting), with a master off-switch for pay-per-use AI.
+
+**How.** Add sensible limits per user and per visitor so one person cannot run up your bill. For pay-per-use AI (speech-to-text, language models, text-to-speech), also cap usage per session and add a master spend off-switch. Limit how much text you send the AI as context, so cost does not grow with each customer's data.
+
+**What bad looks like.** An open /api/chat with no limit, or open interview links with no turn cap, letting a script run up your whole AI budget overnight.
+
+**Why it matters.** Someone can script thousands of requests overnight and you pay the OpenAI or Anthropic bill.
+
+**Paste into your AI tool:**
+
+```text
+Does my app rate-limit expensive endpoints (LLM APIs, email, paid third-party APIs)? If not, add per-user and per-IP limits so a single visitor cannot run up my costs, plus a global spend cap on metered AI.
+```
+
+<sub>Where this comes from: Standard practice; a voice-AI app spend cap and per-session limits.</sub>
+
+### `S12` Harden every server from day one
+
+🟡 **First week** · Phase: Foundation · Added
+
+**What to check.** A server you run yourself starts with the least access it needs, isolation between its parts, and no secrets sitting in plain text on disk.
+
+**How.** On managed platforms (Vercel, Netlify, Supabase, Replit) the platform hardens the server for you; your main job is turning on two-factor login for every admin account. If you run your own server: give the app its own limited user (no automatic admin rights), sandbox the process, restrict what it can reach on the network, keep no plain-text secrets on disk, and turn on an audit log of admin actions.
+
+**What bad looks like.** A break-in dropped a hidden crypto-miner because a too-powerful user, unrestricted network access, and plain-text secrets were all present at once.
+
+**Why it matters.** The attack used every missing layer at the same time. Each layer is cheap; you usually only notice their absence during an incident.
+
+<sub>Where this comes from: a payments SaaS cryptominer incident; a personal lab IMDSv2.</sub>
+
+### `S13` Gate dependencies against known vulnerabilities
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Known security holes in the outside code your app depends on are caught automatically, before they cause an incident.
+
+**How.** Turn on automatic dependency alerts (for example, GitHub's Dependabot) and run a security audit of your packages (npm audit) as a required check that blocks the build when it finds something critical. Pin exact versions so your dependencies do not drift into a bad one.
+
+**What bad looks like.** The break-in that dropped a crypto-miner used a known, already-patchable hole in a package the app depended on indirectly.
+
+**Why it matters.** The vulnerability that gets you is usually one you could have patched.
+
+<sub>Where this comes from: a payments SaaS (RCE was a known Next.js CVE); a review-skill library devops-engineer.</sub>
+
+### `S14` Ship HTTP security headers
+
+🟡 **First week** · Phase: Pre-launch · Added
+
+**What to check.** Your pages send the standard set of protective response headers, small instructions that tell the browser how to keep the page safe.
+
+**How.** The headers to add: a content security policy (which sources the page may load), HSTS (always use https), one that stops your site being framed by others (clickjacking), one that stops content-type guessing, and a referrer policy. On Vercel, Netlify or Cloudflare Pages: this is a small code change (a headers() function in next.config, or a _headers file), no infrastructure access needed. On a static site served through your own CDN (for example S3 plus CloudFront): this is a CDN configuration change, not a code file, so check for cloud console or infrastructure-as-code access before starting, and expect to attach a response-headers policy to the distribution. Either way, confirm it worked by checking the live response headers (curl -I, or a free tool like securityheaders.com), a code change alone does not prove it is live. Keep analytics scripts and any access tokens out of your top-level layout, so sensitive web addresses never reach third-party scripts.
+
+**What bad looks like.** No content security policy, and an access token leaking into your analytics tool because the analytics script sat in the root layout.
+
+**Why it matters.** These headers are a cheap extra layer against clickjacking, injection, and token leaks.
+
+<sub>Where this comes from: a Next.js + AWS app security review (headers + moved analytics out of root layout).</sub>
+
+### `S15` Encode output and sanitize error messages
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Anything a user can influence is safely escaped before it is shown, and users never see raw internal error text.
+
+**How.** If you inject raw HTML into the page, clean it first with a sanitizer (such as DOMPurify), and escape all output. Send users a short error code, never the raw internal error message.
+
+**What bad looks like.** About a dozen places catching an error and sending the raw internal message straight back to the user, leaking how the system works.
+
+**Why it matters.** Unescaped output is the standard way sites get script-injection (XSS) attacks, and raw error text hands attackers a map of your internals.
+
+<sub>Where this comes from: a review-skill library frontend/security reviewer; a Next.js + AWS app deferred error-hygiene debt.</sub>
+
+### `S16` Get the login and security details right
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** The small security details of login and integrations are done the safe way: sign-in handshakes, webhook secrets, admin access, and secret comparisons.
+
+**How.** Sign the login handshake value so it cannot be tampered with (never just a raw user id). Give each incoming-webhook subscription its own random secret. Compare secrets with a constant-time check so timing cannot leak the answer. Only grant admin rights after the user's email is verified.
+
+**What bad looks like.** Auto-granting admin to anyone with a @yourcompany.com address, so someone who signs up as attacker@yourcompany.com becomes a full admin before even verifying the email.
+
+**Why it matters.** These are small, easy-to-miss mistakes that each open a direct path to account takeover or forged requests.
+
+<sub>Where this comes from: a payments SaaS overnight security audit (AUTH-001/003/005).</sub>
+
+### `S17` Reaching an endpoint is not the same as being allowed to use it
+
+🔴 **Launch blocker** · Phase: Build · Added
+
+**What to check.** Being able to reach a function is not the same as being allowed to use it. Sensitive endpoints must confirm the caller is actually trusted.
+
+**How.** For anything sensitive, check that the caller has a trusted server role or actually owns the record. A request that passes with your project's public key only proves it arrived, not that it is allowed. Never trust state the client sends. Do not let every website call your API (no wildcard CORS, the setting for which sites may call you), and never ship a default 'change-me' session secret.
+
+**What bad looks like.** An email-sending function that anyone can call with the public key and any recipient they choose, so an attacker sends phishing from your verified domain.
+
+**Why it matters.** A public endpoint that carries your domain's trust is a ready-made tool for sending phishing to anyone.
+
+<sub>Where this comes from: a Supabase/Next.js app anon-callable email; a voice-AI app CORS origin:true and default SESSION_SECRET.</sub>
+
+---
+
+## 3. Data & Migrations
+
+_One source of truth for your data, and never lose work quietly._
+
+### `D1` Migrations are forward-only, numbered, and idempotent
+
+🔵 **Always-on** · Phase: Build · Added
+
+**What to check.** Every change to your database structure is saved as a new, numbered file, and you never go back and edit the old ones.
+
+**How.** Write each schema change as a migration (a versioned change to your database structure) with the next number in sequence, and ship a new table or column together with its rules (like uniqueness or allowed values) in the same file. On managed platforms (Supabase, Replit, Railway): use their migrations folder or dashboard so each change is tracked. If you run your own server: keep the numbered files in your repo and apply them in order. Use 'create table if not exists' style commands so re-running is safe, and never drop a table or column without a plan.
+
+**What bad looks like.** Editing an old migration in place, or adding a column now and its rules later. The gap lets bad data slip in before the rule exists.
+
+**Why it matters.** Numbered, repeatable migrations give you the same database structure on any machine, and they can safely run again without breaking.
+
+<sub>Where this comes from: a payments SaaS a payments SaaS-api model pattern; a Supabase/Next.js app supabase-conventions.</sub>
+
+### `D2` Keep exactly one schema source of truth
+
+🔵 **Always-on** · Phase: Build · Added
+
+**What to check.** One place defines your database structure, and you fix any disagreements before they drift apart.
+
+**How.** Capture your live database structure as a starting point, compare it carefully against your code's version, and make them match. On managed platforms (Supabase, Replit): let their migrations be the single source and apply changes through a checked step before deploy. If you run your own server: do the same, and remove any code that quietly changes the database on startup while hiding errors.
+
+**What bad looks like.** Four competing definitions of the database, all slightly different. One table had three columns the code did not know about, and a missing uniqueness rule silently broke saves.
+
+**Why it matters.** A database that quietly rewrites itself on startup and swallows errors drifts out of sync, and that breaks saves without warning.
+
+<sub>Where this comes from: a voice-AI app migration-blockers (4 drifting paths).</sub>
+
+### `D3` A too-strict database rule can silently drop the rows it should save
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** When you add a rule that limits which values a column accepts (a CHECK constraint), it lists every value your code actually saves.
+
+**How.** List all the status or category values your code writes before you add the rule, and test saving each one.
+
+**What bad looks like.** An email log's rule rejected the value 'rate_limited', so those events were never recorded, losing exactly the visibility you want during an incident.
+
+**Why it matters.** A missing allowed value makes the save fail quietly inside error-catching code, so the data just disappears.
+
+<sub>Where this comes from: a Supabase/Next.js app email log CHECK.</sub>
+
+### `D4` Fail loud, never silently skip work
+
+🔴 **Launch blocker** · Phase: Pre-launch · Added
+
+**What to check.** A task that cannot finish is marked as failed and reported, never left sitting in limbo forever.
+
+**How.** If a required piece of information is missing, mark that record as failed and send an alert to your error tracker (a tool like Sentry that collects failures). Give each independent step its own error handling so one failure cannot silently skip another unrelated one.
+
+**What bad looks like.** Scheduled tasks were created with a required field left blank, so every one was silently skipped, forever. Nothing failed and no alert fired, while manual actions still worked.
+
+**Why it matters.** A task that is silently skipped is worse than one that fails: nobody ever finds out.
+
+<sub>Where this comes from: a payments SaaS go-live Critical (0 policy reminders sent).</sub>
+
+### `D5` Stop scheduled jobs from processing the same row twice
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** When the same scheduled job runs twice at once, it cannot handle the same record twice.
+
+**How.** Claim each item atomically, meaning you mark it as taken in the same step that reads it, so a second run sees it is already claimed. On managed platforms: use your database's built-in row locking or an 'update ... returning' claim. If you run your own server: the same claim pattern applies, and stagger multiple scheduled jobs to different minutes. A simple 'run once' key alone does not prevent double-processing under load.
+
+**What bad looks like.** A scheduled job with no lock runs twice at the same moment and does the work twice, for example sending a duplicate email or charging a card twice.
+
+**Why it matters.** Two runs reading the same waiting record will both act on it unless one claims it first.
+
+<sub>Where this comes from: a payments SaaS double-send cron.</sub>
+
+### `D6` Compute dates from local calendar parts and test in the target timezone
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Recurring and scheduled dates are correct in your user's timezone, including daylight saving changes and month ends.
+
+**How.** Build dates from the local calendar (year, month, day) rather than from UTC (the global reference time). Test with your app set to the user's timezone, for example Europe/London. For monthly repeats, set the day to the 1st before changing the month, so dates like the 31st do not skip a month.
+
+**What bad looks like.** Recurring due dates landed a day early in production. It only showed up when tested in Europe/London, and was invisible in the UTC-based automated tests.
+
+**Why it matters.** Testing only in UTC hides daylight saving and end-of-month drift, so the bug appears only for real users.
+
+<sub>Where this comes from: a payments SaaS recurring-date bugs.</sub>
+
+### `D7` Add new records instead of overwriting the old ones
+
+🔵 **Always-on** · Phase: Build · Added
+
+**What to check.** Business records are never overwritten or permanently deleted. A change of mind is recorded as a new event that replaces the old one.
+
+**How.** Only simple status changes happen in place. Every event records who or what made it and when. When editing, keep the original value alongside the new one so the history survives.
+
+**What bad looks like.** Overwriting a due date in place with no record of the old one, losing the history of what actually happened.
+
+**Why it matters.** Keeping every version means the system explains itself, and it avoids permanently destroying data.
+
+<sub>Where this comes from: a Next.js + AWS app data contract; a payments SaaS overdue-bill date extension.</sub>
+
+### `D8` Handle money and SQL types explicitly
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Money values are treated as numbers, and every database query safely separates your data from the command.
+
+**How.** Make sure amounts come back as numbers, not text, so math works. Always use placeholders for values in queries (like $1, $2) instead of gluing user input directly into the query text. On managed platforms and if you run your own server, your database library supports these placeholders, so use them everywhere.
+
+**What bad looks like.** An amount returned as text, so arithmetic quietly broke. Or user input glued straight into a query, opening the door to injection (an attacker sneaking commands into your database).
+
+**Why it matters.** Money stored as text is a live bug, and gluing input into queries is the classic way databases get hacked.
+
+<sub>Where this comes from: a payments SaaS numeric parser; a payments SaaS parameterized model pattern.</sub>
+
+### `D9` Store uploads somewhere permanent, not on the server's local disk
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Files your users upload go to dedicated file storage, not the local disk of a server that can restart and wipe them.
+
+**How.** On managed platforms (Vercel, Netlify, Supabase, Replit): use their file or object storage, not the local filesystem. If you run your own server: use S3 or similar and limit access to the exact folder. For images in emails, attach them directly rather than linking to a temporary URL that can expire.
+
+**What bad looks like.** Profile pictures vanished after every restart because a storage setting was blank, so uploads quietly went to a temporary folder that gets wiped.
+
+**Why it matters.** Anything written to a server's temporary or local folder is erased when it restarts.
+
+<sub>Where this comes from: a payments SaaS avatar-storage-ephemeral.</sub>
+
+### `D10` Encrypt personal data, and keep your database types up to date
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Sensitive personal details are scrambled when stored (encrypted at rest), and your app's description of the database matches the real one.
+
+**How.** Encrypt personal fields like name, email, phone and address where they are stored. Whenever you change the database structure, regenerate the file that tells your code what the database looks like. Do not paper over missing pieces with forced type overrides.
+
+**What bad looks like.** An out-of-date database type file, missing several tables, forced unsafe overrides across the app, which hid real errors.
+
+**Why it matters.** Encryption limits the damage if data is stolen, and out-of-date types quietly switch off the checks that catch mistakes.
+
+<sub>Where this comes from: a review-skill library @encrypt entity checklist; a Supabase/Next.js app stale supabase/types.</sub>
+
+---
+
+## 4. Emails & Deliverability
+
+_Prove your mail reaches a real inbox, and that only you can send from your domain._
+
+### `E1` Configure SPF, DKIM and DMARC, and roll DMARC out in stages
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** SPF, DKIM and DMARC (three DNS records, settings on your domain, that prove your email really comes from you) are all verified, and DMARC is set to actually block fakes.
+
+**How.** In your email provider (Resend, Postmark, SendGrid) the domain should show all three as verified. Double-check independently at a site like dmarcian.com. Roll DMARC out in stages: start at 'p=none' (monitor only) with a reporting mailbox, watch a couple of weeks of reports, then tighten to 'p=quarantine'. Keep the reporting address on the same domain.
+
+**What bad looks like.** Missing DMARC lets scammers send fake mail from support@yourapp.com. Missing SPF or DKIM sends your real mail straight to spam. Leaving DMARC at monitor-only protects nothing.
+
+**Why it matters.** Without these, spam filters distrust you and anyone can send fake email as your domain.
+
+<sub>Where this comes from: Standard practice; a payments SaaS staged DMARC rollout.</sub>
+
+### `E2` Set up transactional emails through a real provider
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** Your signup, billing and password-reset emails actually send, through an email service you control.
+
+**How.** Connect a real email provider (Resend, SendGrid) and send through it. If your login is handled by a service like Auth0, connect your own email provider inside it before customizing any login emails, and reuse your existing domain setup so the authentication records line up automatically.
+
+**What bad looks like.** A login service's default email quietly ignores all your customization and sends plain mail from a generic address you do not own, behind only a small warning.
+
+**Why it matters.** The default setup looks finished but sends unbranded mail that fails the authentication checks.
+
+<sub>Where this comes from: Standard practice; a payments SaaS Auth0 custom provider.</sub>
+
+### `E3` Send yourself a signup email in Gmail AND Outlook
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** Your real emails look right in Gmail and Outlook, the two clients most of your users have.
+
+**How.** Send an actual signup email to a Gmail account and an Outlook account. Check the buttons: Gmail changes link colors and underlines even when you try to force them, so put the button's color and padding on the surrounding cell and wrap the label so its color sticks.
+
+**What bad looks like.** A call-to-action button that shows up as a plain blue underlined link in Gmail, or a broken layout in Outlook.
+
+**Why it matters.** Every email client mangles HTML differently, so the only test that counts is a real inbox.
+
+<sub>Where this comes from: Standard practice; a payments SaaS gmail button rendering.</sub>
+
+### `E4` Send app emails from a subdomain, on the authenticated domain
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** Automated mail sends from a subdomain like mail.yourapp.com, and the 'From' address is on the same domain your email authentication is set up for.
+
+**How.** Add a subdomain (a prefix on your domain, like mail.yourapp.com) as your sending address. Keep the 'From' address on that same domain, because a mismatch quietly fails the authentication check and lands you in spam. Give marketing mail its own separate subdomain too.
+
+**What bad looks like.** App mail, marketing blasts and your personal replies all sent from one domain. One wave of spam complaints damages the reputation of all of it.
+
+**Why it matters.** Sending reputation sticks to the domain you send from, so a subdomain keeps any damage contained.
+
+<sub>Where this comes from: Standard practice; a payments SaaS From-domain alignment.</sub>
+
+### `E5` Score 9+ on mail-tester, and read reputation not anecdotes
+
+🟢 **Nice to have** · Phase: Pre-launch · Expanded
+
+**What to check.** An independent tester gives your mail a high score, and you judge whether mail is landing by real reputation data, not one-off stories.
+
+**How.** Aim for 9 or 10 out of 10 at mail-tester.com with all authentication passing, and watch your reputation in Google Postmaster Tools. A brand-new or heavily-tested inbox landing in spam is often just its freshness plus low volume, not a real setup problem.
+
+**What bad looks like.** Chasing an imaginary setup bug because one fresh test inbox went to spam, while mail-tester scored a perfect 10.
+
+**Why it matters.** One story is noise. The score plus a reputation trend is the real signal.
+
+<sub>Where this comes from: Standard practice; a payments SaaS deliverability observability.</sub>
+
+### `E6` Add email DNS records carefully so they don't get mangled
+
+🟡 **First week** · Phase: Pre-launch · Added
+
+**What to check.** The DNS text records for email authentication are added cleanly, without being broken up or corrupted.
+
+**How.** Long authentication values can get mangled when pasted into a DNS provider's web box, which may split them on line breaks and add stray quotes. On managed DNS (Cloudflare, your domain registrar): paste the value into a single record field exactly as given, and confirm it saved as one clean record. If you run your own DNS: add it via the command line in correctly-sized quoted chunks and verify with a lookup tool (dig).
+
+**What bad looks like.** Hitting the same broken-record trap twice in one day, ending up with three corrupted values instead of one working one.
+
+**Why it matters.** Some DNS web forms silently corrupt long text records.
+
+<sub>Where this comes from: a payments SaaS Route 53 DKIM.</sub>
+
+### `E7` Restart your app after adding the email key, or nothing sends
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Email actually goes out after you add your provider's key, not just in theory.
+
+**How.** Restart your app after changing any email settings. Confirm any test-only or 'dry-run' mode is turned off and that the API key is actually loaded in the running app. On managed platforms: redeploy after changing the setting. If you run your own server: restart the process.
+
+**What bad looks like.** A missing production setting means email silently does nothing, with no error: the app stays in test mode and quietly sends nothing.
+
+**Why it matters.** Your app reads its settings when it starts, so a key added afterward does nothing until you restart.
+
+<sub>Where this comes from: a Next.js + AWS app Resend dry-run.</sub>
+
+### `E8` Expect email scanners to click your one-time links first
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Verification and magic links still work even after an automatic email scanner opens them before your user does.
+
+**How.** Do not assume a link can only be used once by the real person. Add a way for the app to re-check status, so a user whose link was already opened by a scanner can still get unblocked, for example a page that re-checks whether they are verified.
+
+**What bad looks like.** A stuck account because a company email scanner used up the one-time link first, so the person sees 'link already used'.
+
+**Why it matters.** Company email scanners and link previewers often open links before the human clicks.
+
+<sub>Where this comes from: a payments SaaS email-verification self-heal.</sub>
+
+### `E9` Add one-click unsubscribe to marketing mail (CAN-SPAM)
+
+🟡 **First week** · Phase: Pre-launch · Added
+
+**What to check.** Marketing and bulk email includes a working unsubscribe link, and opting out of product emails is a choice you make on purpose.
+
+**How.** Add a one-click unsubscribe to marketing and waitlist emails (most providers, like SendGrid, offer this built in). Decide deliberately whether product and transactional emails have an opt-out, rather than just leaving it off.
+
+**What bad looks like.** A newsletter with no unsubscribe link, which breaks CAN-SPAM (the US anti-spam law) and quickly draws spam complaints.
+
+**Why it matters.** Bulk email legally needs an unsubscribe path, and complaints damage your sending reputation.
+
+<sub>Where this comes from: a payments SaaS List-Unsubscribe on waitlist mail; CAN-SPAM gap in the standard checklist.</sub>
+
+---
+
+## 5. Findability (SEO)
+
+_When someone shares your link, it should look intentional, not a grey box._
+
+### `SEO1` Add a preview image for your links (og image)
+
+🔴 **Launch blocker** · Phase: Pre-launch · Classic check
+
+**What to check.** When someone shares your link, it shows a proper preview picture, title and description, the way Stripe's links do.
+
+**How.** Add a preview image (an og:image, the picture shown when your link is shared) sized 1200x630 to your public folder, and set the preview title, description and image tags, plus the 'large image' card setting. Test by sending the link to yourself on WhatsApp and checking it at opengraph.xyz. Add a favicon (the little tab icon) if you do not have one.
+
+**What bad looks like.** A bare grey link with no image, or worse, a preview still pointing at localhost:3000. Social apps cache previews, so a broken one sticks around.
+
+**Why it matters.** On launch day your link gets shared more than ever, and the preview is the first thing everyone sees.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SEO2` Submit your sitemap to Google Search Console
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** Google knows your pages exist because you handed it a list of them.
+
+**How.** Create a sitemap (a sitemap.xml file listing your pages) and submit it in Google Search Console, Google's free site-owner dashboard. Update the 'last modified' date when pages change.
+
+**What bad looks like.** No sitemap, so Google finds your pages slowly or not at all.
+
+**Why it matters.** The sitemap is how Google discovers and prioritizes your pages.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SEO3` Check you are not accidentally blocking Google
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** Nothing is accidentally telling Google to stay away from your public pages.
+
+**How.** Check that your robots.txt file, which tells search engines where they may go, has no stray 'Disallow: /', and that your public pages have no leftover 'noindex' tag from staging (a tag that hides a page from search).
+
+**What bad looks like.** A 'Disallow: /' or a 'noindex' carried over from staging, making your whole site invisible to search.
+
+**Why it matters.** One leftover line can hide your entire site from search.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SEO4` Give every page a real title, description, and clean search tags
+
+🟡 **First week** · Phase: Pre-launch · Expanded
+
+**What to check.** Each public page has its own unique title and description, a preferred-URL tag, and extra tags that help search engines understand it.
+
+**How.** Write a real title and description for each page. Add a canonical tag (which tells search engines the one true URL for a page, avoiding duplicate-content confusion) and structured data (JSON-LD, small hidden tags describing what the page is, like an article or an FAQ). Make adding these part of your routine whenever you add a page.
+
+**What bad looks like.** Every page sharing the same generic title, or the same content reachable at several URLs with no preferred one marked.
+
+**Why it matters.** Your title and description are what people see in search results, and the extra tags can earn you richer listings.
+
+<sub>Where this comes from: Standard practice; a marketing site per-page JSON-LD pattern.</sub>
+
+### `SEO5` Remove localhost and staging leftovers
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** No localhost or staging web addresses are left in what your live site sends out.
+
+**How.** Search your built site for 'localhost', staging domains and test addresses. Check the link-preview tags, the preferred-URL tags, and the addresses your app calls.
+
+**What bad looks like.** A preview image or preferred-URL tag pointing at localhost:3000, or an app request going to a staging server.
+
+**Why it matters.** Leftover development addresses break previews and can expose internal endpoints.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SEO6` App on a subdomain, marketing on the main domain
+
+🟢 **Nice to have** · Phase: Foundation · Classic check
+
+**What to check.** Your marketing site and your actual app live on separate web addresses.
+
+**How.** Put the app on a subdomain like app.yourapp.com and the marketing site on yourapp.com. Decide this early, because moving it later is painful.
+
+**What bad looks like.** Mixing marketing pages and the logged-in app on one address, tangling up search ranking and login cookies.
+
+**Why it matters.** Keeping them separate keeps your search, analytics and login cookies clean.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SEO7` Add a robots.txt (and llms.txt if you want)
+
+🟢 **Nice to have** · Phase: Pre-launch · Classic check
+
+**What to check.** A robots.txt file tells search crawlers what they may look at and points them to your sitemap.
+
+**How.** Allow everything by default, block your admin and private pages, and point to your sitemap. Optionally add an llms.txt file, a plain summary of your key pages for AI tools.
+
+**What bad looks like.** No robots.txt at all, or the opposite: a 'Disallow: /' that blocks everything.
+
+**Why it matters.** It is the first file Google reads, and it guides the good crawlers.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SEO8` Make link-preview images from a designed card, not a screenshot
+
+🟢 **Nice to have** · Phase: Pre-launch · Added
+
+**What to check.** Your link-preview image is intentional, branded artwork, not a raw screenshot of your site.
+
+**How.** Design a 1200x630 preview card as a web page and turn it into an image using a headless browser (a browser with no visible window, run automatically) so real fonts render. When you change the wording, re-generate it rather than editing the image by hand.
+
+**What bad looks like.** Using raw website screenshots as the preview, which look like tiny white blobs at thumbnail size.
+
+**Why it matters.** A designed card reads clearly at small sizes and stays on-brand.
+
+<sub>Where this comes from: a marketing site OG card rendering.</sub>
+
+---
+
+## 6. Speed & UX
+
+_Fast on a normal phone, and nothing that jumps, blanks, or dead-ends._
+
+### `SP1` Run PageSpeed Insights
+
+🔴 **Launch blocker** · Phase: Pre-launch · Classic check
+
+**What to check.** Your app loads fast on a normal phone using normal internet.
+
+**How.** Go to pagespeed.web.dev, enter your URL, and read the Mobile score. Under 50: fix it before launch. 50 to 89: fix your single biggest issue and launch. 90 or above: move on. You can paste the report into your AI tool and ask for a prioritised fix list.
+
+**What bad looks like.** A mobile score of 34, caused by one giant 4MB hero image.
+
+**Why it matters.** A page that takes 3 or more seconds to load loses half its visitors before they even see your headline.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SP2` Compress your images
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** Your images are sized and compressed for the web.
+
+**How.** Run your images through a compressor like Squoosh. Serve them at the size they actually display, use modern formats (WebP or AVIF), and lazy-load anything below the fold (further down the page, not visible until you scroll).
+
+**What bad looks like.** A hero image several megabytes in size, or uncompressed PNGs, dominating your load time.
+
+**Why it matters.** It is almost always the images or video. Compressing them is the single biggest speed win.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SP3` Fix anything that jumps around while loading (CLS)
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** The layout does not shift around as the page loads.
+
+**How.** Reserve space ahead of time for images, embeds and ads by setting explicit width and height, or an aspect ratio. Do not inject new content above content that is already on screen.
+
+**What bad looks like.** A button that moves down just as you tap it, because an image finished loading above it.
+
+**Why it matters.** This shifting is called layout shift (CLS, or Cumulative Layout Shift). It is jarring, causes misclicks, and hurts your Google speed score.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `SP4` Remove libraries AI installed but did not use
+
+🟢 **Nice to have** · Phase: Pre-launch · Expanded
+
+**What to check.** Unused packages and dead code are removed, and very large bundles are split into smaller pieces.
+
+**How.** Run a dead-code finder (knip) and a duplication finder (jscpd), run npm audit for known problems, and split any bundle several megabytes in size into smaller chunks. Before deleting anything, confirm by hand that it is truly unused: these tools can miss code that is loaded dynamically.
+
+**What bad looks like.** A 1.4MB JavaScript bundle with no splitting and unused packages, or deleting a live component that a tool wrongly flagged as dead.
+
+**Why it matters.** Dead weight slows your app and gives attackers more to work with, but a wrong deletion can break your live site.
+
+<sub>Where this comes from: Standard practice; a Supabase/Next.js app 1.4MB bundle; a payments SaaS knip false positive.</sub>
+
+### `SP5` Reveal animations enhance an already-visible default and honor reduced motion
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Your content is visible even without JavaScript, and any animation is an added bonus that can be turned off.
+
+**How.** Never make content appear only after an animation runs. Give every animation a fallback for people who ask for less motion (reduced motion, a browser and operating-system setting for users prone to motion sickness): fade it in, or just show it instantly. Ease animations out smoothly, with no bounce.
+
+**What bad looks like.** A scroll-in animation that leaves the section completely blank in a preview tool or a background browser tab, because the animation never runs there.
+
+**Why it matters.** If content only appears when an animation fires, and the animation fails, the content is simply missing. That is a correctness bug, not a style one.
+
+<sub>Where this comes from: a frontend-quality skill skill (Motion).</sub>
+
+### `SP6` Disable buttons that do nothing, and keep small errors from blanking the page
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Buttons that would have no effect are disabled, and a minor error keeps the user on the page instead of wiping it.
+
+**How.** Disable any action that would do nothing (a Start button when everything is already started). Show validation messages and warnings in a dismissible popup or an inline note, and save the full-page error screen for a genuine, cannot-continue failure. Always show an empty state rather than hiding a section just because it has no data yet.
+
+**What bad looks like.** A recoverable warning that replaces the whole page with a single line of text, leaving the user stranded with no way back.
+
+**Why it matters.** Buttons that do nothing and pages that go blank are dead-ends that make people stop trusting your app.
+
+<sub>Where this comes from: a payments SaaS and a payments SaaS non-fatal-error handling.</sub>
+
+### `SP7` Stop browser-only code from crashing the page on the server
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Components that run in the browser do not crash the server while the page is first being built.
+
+**How.** Some things (window, document, localStorage) only exist in the browser. Before using them, check that you are actually in a browser (typeof window !== 'undefined'), or run them inside an effect that only fires in the browser.
+
+**What bad looks like.** A component reading the page address (window.location) as the page is built, which crashes the server render.
+
+**Why it matters.** In Next.js, code marked to run in the browser still runs once on the server first, where window does not exist yet.
+
+<sub>Where this comes from: a payments SaaS SSR crash.</sub>
+
+### `SP8` Load your responsive style rules after the base rules they override
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Your rules for smaller screens actually win, because the browser reads them after the base rules they are meant to override.
+
+**How.** Put your mobile layout rules (the ones that stack columns into a single column) at the end of the same stylesheet that defines the normal layout, not in a file loaded earlier. Also watch how specific each rule is, so two rules do not silently cancel each other out.
+
+**What bad looks like.** The whole site broke on phones because the mobile rules lived in a file loaded before the base layout, so they quietly lost.
+
+**Why it matters.** When two rules are equally specific, the one loaded later wins. Load order decides it.
+
+<sub>Where this comes from: a marketing site mobile cascade break.</sub>
+
+---
+
+## 7. Analytics & Observability
+
+_Know where your visitors come from, and hear about problems before they do._
+
+### `A1` Install analytics and check it is actually firing
+
+🔴 **Launch blocker** · Phase: Pre-launch · Classic check
+
+**What to check.** Analytics (which shows where your visitors come from and what they do) is live and confirmed recording on your real site before launch.
+
+**How.** Install an analytics tool (PostHog has a generous free tier) or similar. Open your live site in a private or incognito tab and confirm you show up in its real-time view. Make sure it records on your live domain, not just on your computer.
+
+**What bad looks like.** Launch day brings 2,000 visitors and your analytics shows 0, because the tracking code only ran on your development machine.
+
+**Why it matters.** Launch traffic only happens once. Without analytics, that data is gone for good.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `A2` Track real-user speed scores from day one
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** You collect real speed scores from actual visitors' devices, starting at launch.
+
+**How.** From your very first deploy, send web vitals (Google's core speed measurements: loading speed, layout stability, and how quickly the page responds to taps) into your analytics.
+
+**What bad looks like.** Finding out months later that phone users had painfully slow loading, with no history to show when it started.
+
+**Why it matters.** You cannot improve real-world speed you never measured.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `A3` Add basic bot protection
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** Your forms are protected from bots without forcing real people to solve puzzles.
+
+**How.** Add an invisible bot check like Cloudflare Turnstile to your signup and contact forms, and check it on the server. It is free and invisible to most real users. Do not turn on aggressive blocking that also shuts out helpful bots (search engines, ChatGPT, Perplexity).
+
+**What bad looks like.** 400 fake signups overnight, wrecked analytics, and a burned-through email quota from confirmation mails sent to junk addresses.
+
+**Why it matters.** Bots find new sites within hours, and not all web traffic is human.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `A4` Set up at least one conversion funnel
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** You can see where people drop off as they move through your main flow.
+
+**How.** Pick the key steps (landing, started signup, finished signup, first real use) and build one funnel from them in your analytics.
+
+**What bad looks like.** Knowing you got traffic, but not which step everyone quit at.
+
+**Why it matters.** A funnel turns raw visitor numbers into an answer about why people did or did not sign up.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `A5` Turn on error tracking and wire your logger into it
+
+🔴 **Launch blocker** · Phase: Pre-launch · Expanded
+
+**What to check.** When your app crashes or hits a bug in production, you find out right away and get the details, instead of hearing it from an unhappy customer.
+
+**How.** Install error tracking: a service (like Sentry, which has a free tier) that catches errors in your live app and alerts you. Wire your app's error logging into it so problems show up automatically, without you digging through server logs. Check it first whenever something breaks.
+
+**What bad looks like.** An email that failed to send but was only written to the console, so it never showed up anywhere you actually look.
+
+**Why it matters.** You cannot fix what you never see, and logging into a server to guess is slow.
+
+<sub>Where this comes from: Standard practice; a payments SaaS Sentry logger integration.</sub>
+
+### `A6` Never log PII or tokens, anywhere
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Your logs, error tracker and analytics never contain personal data (emails, phone numbers, message contents) or access tokens.
+
+**How.** Personal data (PII: emails, phone numbers, addresses, message contents) and tokens (secret access keys, often hidden inside URLs) should never be saved. To still tell users apart, save a short scrambled version of their id instead. Strip known personal data before it reaches your error tracker, and hide token-carrying URLs in your logs.
+
+**What bad looks like.** A secret link token flowing into your analytics and server logs: a working access key sitting in plain sight.
+
+**Why it matters.** Logs and analytics are seen by many people and kept a long time. Personal data there is a leak waiting to happen.
+
+<sub>Where this comes from: a payments SaaS SEC-2/SEC-3 and quote-token leak.</sub>
+
+### `A7` Set up session recordings, with consent and sampling
+
+🟢 **Nice to have** · Phase: Pre-launch · Expanded
+
+**What to check.** Session replay (a video-like recording of what a user did on screen) is on where it helps, with consent and a sensible amount recorded.
+
+**How.** Turn on session replay (PostHog, Amplitude) and ask for consent first. Recording 100% of sessions gets expensive and raises privacy concerns, so record only a sample of them and hide sensitive fields like passwords.
+
+**What bad looks like.** Recording every single session, with cost and privacy-notice duties that nobody thought about.
+
+**Why it matters.** Replay is powerful, but recording everyone is costly and a privacy risk.
+
+<sub>Where this comes from: Standard practice; a marketing site 100%-sampling flag.</sub>
+
+### `A8` Build an in-app admin panel for operational visibility
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** You can see how things are running from inside your own app, not only through outside tools.
+
+**How.** Build a simple admin page inside the app that shows and manages what is going on, rather than relying on scripts or scheduled outside checks. Add that admin view alongside each new feature you ship.
+
+**What bad looks like.** The only way to check how things are running is to log into a server or run a script that nobody remembers.
+
+**Why it matters.** A built-in admin view is visible to your whole team, uses your existing login, and does not depend on outside tools.
+
+<sub>Where this comes from: a payments SaaS in-app monitoring preference.</sub>
+
+### `A9` Verify analytics load order and that blockers do not kill it
+
+🟡 **First week** · Phase: Pre-launch · Added
+
+**What to check.** Your analytics scripts load in a set order, and you have confirmed they are actually sending data.
+
+**How.** Load them in a fixed order in the page header, then open your browser's network tab and confirm a page view is sent to the correct account. A data not collecting yet warning right after setup is usually just a new account catching up. Check with ad and tracker blockers switched off.
+
+**What bad looks like.** Assuming Google Analytics works because it is installed, when blockers quietly stop it and you never see real numbers.
+
+**Why it matters.** Installed is not the same as collecting. Blockers and wrong load order both break it quietly.
+
+<sub>Where this comes from: a marketing site GA4 verification.</sub>
+
+---
+
+## 8. Legal & Compliance
+
+_The policies you need, and the data-deletion request that will land one day._
+
+### `L1` Publish a Privacy Policy (and Terms of Service if you sell or take accounts)
+
+🔴 **Launch blocker** · Phase: Pre-launch · Classic check
+
+**What to check.** You have the policies your site legally needs, linked in the footer. If you use analytics, cookies, or a contact form, you need a Privacy Policy. If you sell anything or let people create accounts, you also need Terms of Service.
+
+**How.** Privacy Policy: list what you collect (including analytics and cookies), why, how long you keep it, and how someone asks to have it deleted. Under UK, EU (GDPR) and California (CCPA) law this is required the moment you track visitors or take their details. Terms of Service (only if you sell or take sign-ups): cover refunds, the limits of your liability, and a warranty disclaimer. Link both in the footer, and have a lawyer look if you can.
+
+**What bad looks like.** A site running analytics with no privacy or cookie notice, which is a real fine risk in the UK and EU. Or taking payments with no terms, so a processor like Stripe stalls your application.
+
+**Why it matters.** A privacy policy is legally required the moment you track visitors, and payment processors require terms before they approve you.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `L2` Know who your merchant of record is
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** You know who is legally responsible for sales tax, including VAT (the value-added sales tax charged across Europe), on your sales.
+
+**How.** With plain Stripe, you are the merchant of record (the party legally responsible for the sale and its taxes), so you owe tax filings in your customers' countries. To hand that off, use a merchant of record like Polar (built on Stripe, handles VAT for you) or Stripe Managed Payments (for an extra fee).
+
+**What bad looks like.** A year of international sales through plain Stripe, then discovering you owed VAT registrations in a dozen countries the whole time.
+
+**Why it matters.** Choosing a merchant of record on day one costs a slightly higher fee. Unreported tax later costs a tax advisor and back payments.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `L3` Add a cookie banner if you track
+
+🟡 **First week** · Phase: Pre-launch · Classic check
+
+**What to check.** If you set non-essential cookies, visitors can accept or decline them.
+
+**How.** Add a consent banner that genuinely holds back the tracking scripts until the user agrees, with a decline option that actually works. Make declining the default choice.
+
+**What bad looks like.** Loading analytics and session replay before the user has agreed to anything, in a place where the law requires consent first.
+
+**Why it matters.** Tracking people without consent is a legal risk wherever GDPR and EU privacy rules apply.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `L4` Build a real data-deletion mechanism, not just a promise
+
+🟡 **First week** · Phase: Pre-launch · Added
+
+**What to check.** A user can genuinely get their data deleted, and you are able to do it.
+
+**How.** Build the delete my data process your Privacy Policy promises, whether the user does it themselves or you follow a written internal process. Remember the copies elsewhere too: backups, your analytics, your email provider.
+
+**What bad looks like.** A Privacy Policy that promises deletion on request, with nothing behind it when the first request actually arrives.
+
+**Why it matters.** GDPR and CCPA give users the right to be deleted, and the first please delete my data email will come.
+
+<sub>Where this comes from: Gap in the standard checklist (deletion promised in ToS, never built).</sub>
+
+### `L5` Honor enterprise data-location and privacy terms across the whole pipeline
+
+🟢 **Nice to have** · Phase: Build · Added
+
+**What to check.** If enterprise customers need their data kept in the EU, or never used for AI training, your entire system honors that, not just one part.
+
+**How.** Route your whole AI pipeline (speech-to-text, the language model, text-to-speech), not only file storage, through approved regions and providers who will sign a DPA (a data processing agreement, the contract that binds them to handle data your way). For strict separation, give each customer their own separate setup.
+
+**What bad looks like.** A process in the EU setting on file storage, while the AI calls still go to US or global servers, and one copy of the data has no EU restriction at all.
+
+**Why it matters.** Where data lives is a property of the whole pipeline, not a single storage switch, and big deals depend on it.
+
+<sub>Where this comes from: a voice-AI app enterprise residency (Fidelity).</sub>
+
+### `L6` Keep PII and internal docs out of the repo, and settle licensing before going public
+
+🔵 **Always-on** · Phase: Foundation · Added
+
+**What to check.** Even private code repositories exclude raw personal data and secrets, and any repo about to go public is cleaned up and properly licensed first.
+
+**How.** Block raw contact data with .gitignore even in a private repo. Before making a repo public, search both the current files and the full history for internal names and personal data, set the license text and the license field, remove any private setting, and confirm who holds the copyright.
+
+**What bad looks like.** A change that briefly included an internal business document, or old internal project names still sitting in the history before a public release.
+
+**Why it matters.** Private is not the same as safe, and a repo's history keeps everything forever.
+
+<sub>Where this comes from: an AI lead tool repos-always-private; an open-source lab clean-room sweep.</sub>
+
+---
+
+## 9. Payments
+
+_Real money, once, before a customer does it for you._
+
+### `P1` Test your Stripe webhooks in live mode
+
+🔴 **Launch blocker** · Phase: Launch day · Classic check
+
+**What to check.** Your payment flow works with real money, and your app reacts when the payment goes through.
+
+**How.** Switch Stripe to live mode and buy your own product with a real card (refund yourself after). Confirm your app reacted: subscription active, access unlocked, receipt sent. In Stripe, check Developers > Webhooks shows the event delivered with a 200 OK (a webhook is the message Stripe sends your app when a payment happens). Then cancel or refund and confirm your app picks that up too.
+
+**What bad looks like.** Your first customer pays, Stripe takes the money, and your app never finds out, because the live webhook was never set up.
+
+**Why it matters.** You have run checkout in test mode a hundred times and in live mode zero times. Run it once yourself before a customer does.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `P2` Make sure a repeated payment event cannot pay out twice
+
+🔴 **Launch blocker** · Phase: Build · Added
+
+**What to check.** A payment event that arrives twice, or two that arrive at once, cannot hand out a credit or payout more than once.
+
+**How.** Use two guards together: first record that you have handled this exact event (and refuse to handle it again), and also pass Stripe an idempotency key (a marker that tells Stripe running the same request twice counts as once). Use both, not just one.
+
+**What bad looks like.** Referral credits handed out twice because the same event was retried, and neither guard was in place.
+
+**Why it matters.** Stripe retries its messages and events can overlap, so without these guards you pay out double.
+
+<sub>Where this comes from: a payments SaaS double-credit bug.</sub>
+
+### `P3` Funnel every paid event through one shared handler
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Marking something as paid does exactly the same thing no matter what triggered it.
+
+**How.** Send the Stripe webhook, any accounting-sync job, and any manual mark as paid all through one shared piece of code that cancels reminders, sends a single owner notification, and updates the status. Never copy that logic inline in more than one place.
+
+**What bad looks like.** Separate copies of the paid logic in the webhook, the sync job and the manual path, which drift apart and double-fire.
+
+**Why it matters.** One code path means one behavior. Three separate copies drift apart over time.
+
+<sub>Where this comes from: a payments SaaS one shared paid-event handler.</sub>
+
+### `P4` Keep Stripe and your database in sync on purpose
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** Payment status lives in Stripe, and your own database is kept in step with it deliberately.
+
+**How.** Treat Stripe as the single source of truth for payment status, and treat your database as a copy that is updated by Stripe's webhook messages. Regularly reconcile the two rather than assuming they always match.
+
+**What bad looks like.** Payment features that keep breaking because your database and Stripe quietly drift apart and nobody ever compares them.
+
+**Why it matters.** This split-brain (two systems that are supposed to hold the same truth but end up disagreeing) is the root cause of most flaky payment problems.
+
+<sub>Where this comes from: Standard practice (Stripe guide note); a payments SaaS.</sub>
+
+### `P5` Compute and store VAT explicitly
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** The tax shown to customers is calculated and saved together with the tax rate used.
+
+**How.** Work out the VAT (the value-added sales tax used across Europe) as its own line, and save the rate next to the total. Do not show a pre-tax total labelled VAT added without actually storing the rate.
+
+**What bad looks like.** A quote showing the pre-tax total but labelling it VAT added, with no rate saved, misleading the customer about money.
+
+**Why it matters.** Money shown wrongly is a trust and compliance problem, and you cannot rebuild tax records you never saved.
+
+<sub>Where this comes from: a payments SaaS quote VAT.</sub>
+
+### `P6` Suspend money-moving jobs during deploys, and sandbox staging
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Billing and other money-moving scheduled jobs do not run against a half-updated system during a deploy, and your test environment cannot charge anyone.
+
+**How.** Turn off or pause the billing job (and similar ones) before you deploy, and switch it back on after. On your test environment, use Stripe's test keys and a setting that blocks all real outgoing charges and messages.
+
+**What bad looks like.** A billing job running in the middle of a deploy against a half-updated database, or a test-environment job charging real cards.
+
+**Why it matters.** Anything that moves money during a deploy, or on a test environment, can hit real customers.
+
+<sub>Where this comes from: a review-skill library production runbook; a payments SaaS sandbox flag.</sub>
+
+### `P7` Request the current, specific permissions when connecting other services
+
+🟢 **Nice to have** · Phase: Build · Added
+
+**What to check.** When you connect a third-party service, you ask for its current, specific permissions, not old broad ones.
+
+**How.** When you connect another service (through OAuth, the standard connect your account flow), request the exact permission names from the provider's own up-to-date documentation. Watch for recent changes: for example, Xero apps created after 2 March 2026 must use the newer, narrower permissions.
+
+**What bad looks like.** Asking for an old, broad permission the provider no longer accepts, so the connection quietly fails to authorize.
+
+**Why it matters.** Providers retire broad permissions, and asking for the wrong ones fails in confusing ways.
+
+<sub>Where this comes from: a payments SaaS Xero granular scopes.</sub>
+
+---
+
+## 10. Deploy & Release
+
+_Writing the setting down is not the same as it being switched on._
+
+### `DP1` Protect main, and never merge your own review
+
+🔴 **Launch blocker** · Phase: Deploy · Added
+
+**What to check.** Your main branch is protected, changes go live through a reviewed proposal, and whoever wrote the code is not the one who approves it.
+
+**How.** On GitHub (where your code lives): turn on branch protection for your main branch so nobody can push straight to it and skip the checks. Changes go in through a pull request (a proposed change others can look at before it merges). Have a second person, or at least a fresh AI session, review it, not the same session that wrote it, which shares its blind spots.
+
+**What bad looks like.** A repo where anyone can push directly to main, so one push skips the checks and goes straight live onto a server holding real customer data.
+
+**Why it matters.** Without protection, one push bypasses every safety check, and reviewing your own work misses what you already missed.
+
+<sub>Where this comes from: a payments SaaS go-live review (CI-1/CI-2).</sub>
+
+### `DP2` Only deploy code that passed its tests
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** A version that failed its automatic checks never reaches your live site, and what goes live is exactly the version that passed.
+
+**How.** On managed platforms (Vercel, Netlify, Replit): this is largely handled for you, each push builds and only a clean build goes live. Make sure your actual tests run as part of that build, not just the compile step. If you run your own deploy pipeline: only deploy after CI (an automatic check that runs your tests when you push) passes, and deploy the exact version that passed, not whatever is newest on the branch.
+
+**What bad looks like.** Deploying the newest commit while the checks actually passed on an older one, so untested code slips into production.
+
+**Why it matters.** Deploying anything other than the version that passed its checks means shipping code nobody verified.
+
+<sub>Where this comes from: a Next.js + AWS app deploy-pipeline gotchas.</sub>
+
+### `DP3` Point every change at your main branch
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Every proposed change is built on your main branch, so merging it actually puts your work onto main.
+
+**How.** A pull request (a proposed change) merges into a base branch. Keep that base set to main. If you started a change on top of another change that has not merged yet, switch its base back to main before you merge, otherwise your work lands on that other change instead of on main.
+
+**What bad looks like.** A change built on top of another unmerged change gets merged and ships the old design, because it went onto that other branch, not main.
+
+**Why it matters.** Merging a change whose base is some in-between branch never actually puts it on main.
+
+<sub>Where this comes from: a Next.js + AWS app and a Supabase/Next.js app stacked-PR traps.</sub>
+
+### `DP4` Writing the config is not the same as the control being live
+
+🔴 **Launch blocker** · Phase: Deploy · Added
+
+**What to check.** Every security setting and feature switch is confirmed actually on in production, not just written down somewhere.
+
+**How.** On managed platforms (Vercel, Netlify, Replit): after adding a feature flag or setting, set it in the production environment and actually test the behavior, try the thing it is supposed to block or allow. If you self-host with config files that describe your servers (like Terraform): writing and merging that config changes nothing until you apply it, so run the apply step, then confirm the control is really live.
+
+**What bad looks like.** An invite-only gate that stayed off because a production switch was never flipped, and security config that was written and merged but never applied, so none of it was actually protecting anything.
+
+**Why it matters.** Written config and live config are different states, and the gap between them stays invisible until something goes wrong.
+
+<sub>Where this comes from: a Next.js + AWS app security review (TF never applied; invite gate inert).</sub>
+
+### `DP5` Keep your infrastructure config in sync with what is actually running
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** If you describe your servers in config files, that config matches what is really deployed, and you understand a risky change before you apply it.
+
+**How.** On managed platforms (Vercel, Netlify, Replit): nothing to do here, the platform runs the servers for you. If you self-host with config files that describe your servers (like Terraform): commit your config right after applying a change so the saved version and the live setup do not drift apart. Always run the preview or dry-run first and read it for anything it plans to destroy. Some edits restart a server, and some replace it entirely.
+
+**What bad looks like.** Applying a change locally while the config commit lagged behind, so the next run would have deleted the resources that were never committed, nearly wiping the monitoring.
+
+**Why it matters.** When your saved config and your live servers drift apart, the next apply can destroy things that are actually in use.
+
+<sub>Where this comes from: a Supabase/Next.js app aws-terraform gotchas.</sub>
+
+### `DP6` Let your deploy tool log in without long-lived keys
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Your deploy process signs in with short-lived, automatic credentials instead of a permanent secret key sitting in your settings, and it cannot deploy to the wrong account.
+
+**How.** On managed platforms (Vercel, Netlify, Replit): this is handled for you, you connect the platform to your code host once and it manages access, with no key to store. If you self-host on a cloud like AWS: use a keyless login (OIDC, where your deploy tool proves who it is and gets a short-lived credential each time) instead of pasting a permanent access key into your settings, and add an account guard so a misconfiguration cannot apply changes to the wrong account.
+
+**What bad looks like.** A permanent cloud access key stored in your deploy settings, with no account guard, so one wrong setting applies changes to the wrong account.
+
+**Why it matters.** A short-lived login removes the biggest secret you could ever leak, and the account guard stops a change from hitting the wrong place.
+
+<sub>Where this comes from: a Next.js + AWS app and a voice-AI app OIDC + account guard.</sub>
+
+### `DP7` Verify a fresh backup exists before every prod deploy, and know your rollback
+
+🔴 **Launch blocker** · Phase: Deploy · Added
+
+**What to check.** Before you deploy, you confirm a recent backup actually exists, and you know how to go back to the previous working version.
+
+**How.** On managed platforms (Vercel, Netlify, Replit): a rollback (going back to the previous working version) is usually one click in your deployments list, so know where that button is. Your database backups are separate: check that your database provider really made a recent one and that the file is actually there, do not assume. If you self-host: keep the previous version so you can switch back, and label versions clearly instead of overwriting one called latest.
+
+**What bad looks like.** Assuming a backup exists, then finding out after a bad deploy that the backup job had been silently failing for weeks.
+
+**Why it matters.** A backup you have never checked is not a backup, and a deploy with no way back is a one-way door.
+
+<sub>Where this comes from: a review-skill library production runbook.</sub>
+
+### `DP8` A push that auto-deploys is a production action
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** When pushing to your main branch automatically puts the change live, you treat pushing as publishing to the public, not as a casual save.
+
+**How.** On managed platforms, every push to main typically deploys straight to your live site. Once that is true, pause and confirm before you push, even when nothing technically stops you. Tell yourself out loud: this goes live now, ready?
+
+**What bad looks like.** Treating a push as a routine, low-stakes save when it actually publishes straight to the live site everyone can see.
+
+**Why it matters.** Auto-deploy turns a git push into a public, outward-facing action.
+
+<sub>Where this comes from: a marketing site auto-deploy confirm-before-push.</sub>
+
+### `DP9` Make your automated build match your own machine
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Your automatic build uses the same tool versions your project was set up with, and a clean install works on your machine before you push.
+
+**How.** Pin your Node version (an .nvmrc file) and your package manager version so the automatic build (CI) uses the same ones you do. Before pushing, do a clean install from scratch (npm ci, or your tool's frozen-install command) and confirm the tests pass, because your everyday runs reuse already-installed packages and can hide a mismatch.
+
+**What bad looks like.** The build server running a different Node version rejects your dependency lockfile (the file that records exact dependency versions), so the checks go red even though everything looked fine locally.
+
+**Why it matters.** A version mismatch between your machine and the build server turns a passing project into a failing one at the worst time.
+
+<sub>Where this comes from: a Supabase/Next.js app lockfile drift.</sub>
+
+### `DP10` Keep fancy characters out of cloud resource names
+
+🟢 **Nice to have** · Phase: Deploy · Added
+
+**What to check.** Text that becomes a name or description on your cloud resources uses plain characters only, no smart quotes or long dashes.
+
+**How.** This mostly matters if you self-host on a cloud like AWS: keep long dashes and curly quotes out of resource names and descriptions, they often sneak in when you paste from a document. The cloud rejects anything beyond plain ASCII in many of these fields. Comments in your config are fine.
+
+**What bad looks like.** A deploy failing with a validation error because a resource description had a long dash pasted in from some Markdown notes.
+
+**Why it matters.** Clouds reject characters beyond plain ASCII in many name and description fields.
+
+<sub>Where this comes from: a personal lab ASCII-only descriptions.</sub>
+
+### `DP11` Prefer the simplest viable deploy shape
+
+🟢 **Nice to have** · Phase: Deploy · Added
+
+**What to check.** Your setup matches the size of what you actually run, and you resist adding infrastructure you do not need yet.
+
+**How.** For one small app on one server, running it directly and keeping it alive with the built-in service manager beats wrapping it in containers and registries. Right-size your server, keep access locked down, and add complexity only when a real need shows up. On managed platforms this is mostly decided for you, which is the point.
+
+**What bad looks like.** Containers running under an odd user, two competing settings files, and logins that would not stick, all just to run one app on one server.
+
+**Why it matters.** Every layer you do not need is a category of bugs you did not need either.
+
+<sub>Where this comes from: a voice-AI app de-Dockerized; a personal lab Docker-to-native.</sub>
+
+---
+
+## 11. Testing & Launch Day
+
+_Passing tests are not proof. Click through the real thing._
+
+### `T1` Test in a second browser and on desktop
+
+🔴 **Launch blocker** · Phase: Launch day · Classic check
+
+**What to check.** Your main flow works in browsers other than the one you built in.
+
+**How.** Open your app in a browser you did not develop in (Safari, Firefox, Chrome, whichever you skipped), and on a desktop if you built on mobile, or the other way round. Walk through signup and your main action.
+
+**What bad looks like.** A flow that only works in your everyday browser because of a Safari-specific or extension-specific quirk.
+
+**Why it matters.** The browser you built in is the one environment guaranteed to work; every other one is untested until you try it.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `T2` Walk your core flow on your phone, and keep mobile parity
+
+🔴 **Launch blocker** · Phase: Launch day · Expanded
+
+**What to check.** Your main flow works on a real phone, and the mobile version has the same features as desktop.
+
+**How.** Walk through signup and your main action on an actual phone, not just a shrunk browser window. When you add something to the desktop view, check the mobile view too: mobile is often a separate piece of code that does not automatically get desktop changes.
+
+**What bad looks like.** Small labels and notices that shipped on desktop only, and a mobile menu that drifted out of sync and broke the settings page.
+
+**Why it matters.** Most of your users are on phones, and separate mobile code quietly leaves features off.
+
+<sub>Where this comes from: Standard practice; a payments SaaS/a payments SaaS mobile parity.</sub>
+
+### `T3` Click every link and button
+
+🟡 **First week** · Phase: Launch day · Classic check
+
+**What to check.** No link leads to a missing page, and no button does nothing.
+
+**How.** Go through every page and click each link and button, including the footer, the menu, and empty states.
+
+**What bad looks like.** A footer link to a page you renamed, or a button wired up to nothing.
+
+**Why it matters.** Broken links and dead buttons on launch day read as a broken product.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `T4` Try to break your forms
+
+🟡 **First week** · Phase: Launch day · Classic check
+
+**What to check.** Your forms hold up to empty submissions, the wrong kind of input, and double-clicks.
+
+**How.** On every form: submit it empty, type text where a number belongs and a fake email like a@b, and double-click the submit button fast. Add required-field and format checks with inline error messages, and disable the submit button while a submission is running.
+
+**What bad looks like.** A blank white screen after an empty submit, or two charges because someone double-clicked Pay.
+
+**Why it matters.** Users mash buttons and paste strange things; build your forms to expect it.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `T5` Check your 404 page
+
+🟢 **Nice to have** · Phase: Launch day · Classic check
+
+**What to check.** A wrong or mistyped web address shows a friendly, branded page, not a raw error.
+
+**How.** Visit an address on your site that does not exist. Confirm you get a styled not-found page (a 404) with a link back home.
+
+**What bad looks like.** A stock framework error page, or a blank white screen, on any mistyped address.
+
+**Why it matters.** Wrong addresses happen; a good not-found page keeps the visitor on your site.
+
+<sub>Where this comes from: Standard practice.</sub>
+
+### `T6` Have real tests, because green tests still ship bugs
+
+🔴 **Launch blocker** · Phase: Build · Added
+
+**What to check.** You have at least one test that runs against a real database and one that walks the whole app end to end like a user, and both actually run in your automatic checks.
+
+**How.** Add a test that exercises your real code against a real database (not a fake stand-in), faking only login and the parts that send things to the outside world. Add an end-to-end test that clicks through the real app like a user (sign up, verify, create, schedule) and make sure it truly runs in your automatic checks (CI), not only on your machine. After writing a test, ask: would this fail if the feature broke? If not, it is not testing anything.
+
+**What bad looks like.** A feature that shipped with over a thousand passing tests and still crashed on the first real click, because every test faked the database and the backend, and the end-to-end test never ran in CI at all.
+
+**Why it matters.** Tests built on fakes skip the exact things that break in production: the real database, the real app talking to its backend, and the messy conditions bugs need.
+
+<sub>Where this comes from: a payments SaaS deep test-correctness audit.</sub>
+
+### `T7` Run a live browser preflight before shipping UI
+
+🔴 **Launch blocker** · Phase: Launch day · Added
+
+**What to check.** Before you ship a UI change, you open the actual running app in a browser and confirm it renders with no errors.
+
+**How.** Start the real app, open it in a browser, confirm the page actually appears, and open the developer console (the browser's error panel) to check it is clean. Then click through the thing you just changed. Do this even for small changes.
+
+**What bad looks like.** The code looks finished but the page comes up blank, a break that tests never opening a real browser cannot see.
+
+**Why it matters.** Tests that never open a real browser cannot see a blank page; only a real browser can.
+
+<sub>Where this comes from: a review-skill library ac-verify preflight.</sub>
+
+### `T8` Cover the edge-case matrix
+
+🟡 **First week** · Phase: Launch day · Added
+
+**What to check.** Your main flow is tested with strange and hostile input, not just tidy example data.
+
+**How.** Try empty and space-only values, emoji and other languages, very large numbers, tricky dates (timezones, leap years), a brand-new user and a heavy user, and a slow or dropped connection. Aim for at least one error case and one edge case per change, using realistic data.
+
+**What bad looks like.** A flow that only ever ran on clean demo data, breaking the first time a real user pastes an emoji or a huge number.
+
+**Why it matters.** Simple changes break in production on the exact input you never thought to try.
+
+<sub>Where this comes from: a review-skill library qa-manual edge-case matrix.</sub>
+
+### `T9` Prove your access rules by attacking them, not just reading them
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** The code that decides who can see or change what is proven by trying to break it, not by reading it and assuming it is right.
+
+**How.** Have someone, or a separate AI session, actually attempt the attack: fake login cookies, changed values in the web address, tampered headers, a request crafted to edit another user's data. Confirm that only the record you meant to change actually changes.
+
+**What bad looks like.** Signing off that users are properly isolated just by reading the code, and missing a leak a real crafted request would have exposed.
+
+**Why it matters.** Reading the code confirms what you intended; running the attack confirms what actually happens.
+
+<sub>Where this comes from: a Supabase/Next.js app adversarial auth verification.</sub>
+
+### `T10` Test locally first, and guard tests against prod
+
+🟡 **First week** · Phase: Build · Added
+
+**What to check.** You confirm a fix works on your own machine before pushing, and your tests can never touch real production data.
+
+**How.** Run the real build on your machine and open the page before you push, and skim the whole file for the same kind of bug elsewhere. Do not debug by pushing, waiting for the checks, and reading the next error: it is slow and misses nearby bugs. Any test that deletes or changes data must check it is not running against production and default to throwaway demo data.
+
+**What bad looks like.** A push-and-hope loop that burns time waiting on checks and misses sibling bugs, or a cleanup test that wipes real production data.
+
+**Why it matters.** Checking locally is faster and safer, and an unguarded test can delete real customer data.
+
+<sub>Where this comes from: a payments SaaS test-locally-first; a review-skill library production-safety.</sub>
+
+---
+
+## 12. Post-Launch & Operations
+
+_Backups you have actually restored, spend you keep an eye on, and a plan written before the fire._
+
+### `O1` Add uptime monitoring and alerting you actually watch
+
+🟡 **First week** · Phase: Post-launch · Added
+
+**What to check.** You get told when your app goes down, in a place you will actually notice.
+
+**How.** Set up an uptime monitor (an outside service that pings your app every few minutes and alerts you if it stops responding, for example UptimeRobot or Better Stack) pointing at a simple health-check page. Send its alerts, and your error-tracker alerts, somewhere you check like email or Slack. Error tracking and uptime monitoring are not the same thing.
+
+**What bad looks like.** Finding out your app was down from an angry user, because nothing was watching the front door.
+
+**Why it matters.** Error tracking catches crashes inside a running app; it cannot tell you the app stopped responding entirely.
+
+<sub>Where this comes from: Gap; a payments SaaS observability.</sub>
+
+### `O2` Back up automatically, and test a restore
+
+🟡 **First week** · Phase: Post-launch · Added
+
+**What to check.** Backups run on a schedule, and you have actually restored one to prove it works.
+
+**How.** On managed database providers (Supabase, Neon, PlanetScale, Railway): automatic backups are usually on, so confirm they are running and learn how long they are kept (free plans may keep only a few days). Whatever the setup, do a real restore into a scratch copy at least once, because a backup you have never restored might not actually work. If you self-host: automate the backups and confirm the file really lands in storage.
+
+**What bad looks like.** A backup job that had been quietly failing, discovered only the day you finally needed it.
+
+**Why it matters.** A backup you have never restored is a hope, not a recovery plan.
+
+<sub>Where this comes from: a review-skill library verify-backup; a Next.js + AWS app free-plan backup cap.</sub>
+
+### `O3` Watch your monthly spend and how long your money lasts
+
+🔵 **Always-on** · Phase: Post-launch · Added
+
+**What to check.** You know roughly what you spend each month and your runway (how many months your money lasts at that rate), and cost is part of every decision that adds infrastructure.
+
+**How.** Keep an eye on your hosting and AI-usage bills, a running total helps. When you propose something that costs money, say how much per month it adds, and default to the cheapest option that works. Use free tiers wherever they do the job.
+
+**What bad looks like.** Drifting toward a paid plan or a runaway AI bill with no idea it is happening until the invoice arrives.
+
+**Why it matters.** When you are living on startup credits, every line item shortens or extends how long you can keep going.
+
+<sub>Where this comes from: a personal lab cost-sensitivity; a payments SaaS AWS credits.</sub>
+
+### `O4` Write the incident runbook while calm
+
+🟡 **First week** · Phase: Post-launch · Added
+
+**What to check.** You have a short written guide (a runbook) for the emergencies you can see coming, written before one actually happens.
+
+**How.** Write down the steps for the likely emergencies: how to replace a leaked key (which dashboard, in what order, then redeploy), how to roll back to the previous working version, and who to contact. Keep it somewhere you can find fast when you are stressed.
+
+**What bad looks like.** Improvising how to replace a leaked key and recover your settings at 2am in the middle of a live incident.
+
+**Why it matters.** The middle of an emergency is the worst possible time to work out the steps for the first time.
+
+<sub>Where this comes from: a payments SaaS incident recovery.</sub>
+
+### `O5` Turn on MFA for every admin and keep a record of admin actions
+
+🟡 **First week** · Phase: Foundation · Added
+
+**What to check.** Every admin account needs a second login step, and there is a log of who did what.
+
+**How.** Turn on MFA (a second login step beyond the password, like a code from your phone) on every account that can administer your app, host, or cloud. Do not leave an admin account protected by a password alone, or with a permanent access key and no second step. Turn on an activity log where your provider offers one (on AWS this is CloudTrail) so there is a record if something goes wrong.
+
+**What bad looks like.** No activity log anywhere and a full-admin account with an active key and no second login step, all discovered during an audit.
+
+**Why it matters.** These protections are cheap to turn on, and their absence is only ever noticed during an incident.
+
+<sub>Where this comes from: a payments SaaS go-live review.</sub>
+
+### `O6` Keep the docs and project brain current as the stack changes
+
+🔵 **Always-on** · Phase: Post-launch · Added
+
+**What to check.** Your CLAUDE.md and key docs describe your current stack, not last month's.
+
+**How.** Update CLAUDE.md the moment your stack changes: it is the first thing every AI agent and teammate reads. Put your project-specific security rules in there too, so the right defaults are enforced automatically.
+
+**What bad looks like.** A CLAUDE.md still describing the old stack for weeks after a rebuild, quietly steering every agent wrong.
+
+**Why it matters.** A stale project brain misleads every future session.
+
+<sub>Where this comes from: a Supabase/Next.js app stale CLAUDE.md.</sub>
+
+### `O7` Check the human explanation before deep forensics
+
+🔵 **Always-on** · Phase: Post-launch · Added
+
+**What to check.** When something looks alarming, you first check for a simple human cause before assuming the worst.
+
+**How.** Before starting a security investigation over scary-looking output, ask the obvious questions: did someone paste a suggestion from a chat, run the wrong command, or hit a known quirk of a tool? Rule out the boring explanation first.
+
+**What bad looks like.** Hours of malware investigation on a perfectly clean machine, when the real cause was a chat suggestion someone pasted into a real terminal.
+
+**Why it matters.** The mundane explanation is usually the right one, and it is cheap to rule out first.
+
+<sub>Where this comes from: a marketing site bang-prefix confusion.</sub>
+
+### `O8` Separate external-service instances per environment, and update every webhook surface
+
+🟡 **First week** · Phase: Deploy · Added
+
+**What to check.** Your development and production setups use separate accounts for outside services, and when a callback address changes you update it everywhere it lives.
+
+**How.** Use a separate copy for development and for production of any bot or third-party integration (for example a test chatbot and a live one), so they do not fight over the same connection. When you change a webhook (a URL an outside service calls to notify your app of an event), update it everywhere it is stored: some services keep that URL in a different setting than you would expect.
+
+**What bad looks like.** A shared bot token making dev and prod overwrite each other's connection, and a provider showing traffic while production logs nothing because the wrong setting was updated.
+
+**Why it matters.** Shared accounts ping-pong between your environments, and a stale second copy of a callback URL quietly sends messages to the wrong server.
+
+<sub>Where this comes from: a payments SaaS Telegram dev/prod; Twilio webhook layers.</sub>
+
+---
+
+<sub>Generated from data/checklist.mjs by build.mjs. Edit the data, then run `node build.mjs` to regenerate this file and index.html.</sub>

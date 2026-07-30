@@ -1,0 +1,17 @@
+# scan output (contains project-specific findings)
+ship-kit-report/
+ship-kit.config.json
+
+# private provenance (maps checks to the real projects that taught them)
+PROVENANCE.private.md
+
+# one-time sanitizer (lists the private tokens it scrubs)
+tools/
+
+# generated artifact variant (Claude Artifacts)
+artifact.html
+
+# os / editor
+.DS_Store
+*.log
+node_modules/
