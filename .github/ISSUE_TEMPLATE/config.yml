@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: What Ship Kit is
+    url: https://edgewiselab.co.uk/ship-kit
+    about: An overview of the tool and how to use it.
+  - name: Work with Edgewise Lab
+    url: https://edgewiselab.co.uk
+    about: Want a hand launching your app? Book a call.

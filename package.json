@@ -1,0 +1,16 @@
+{
+  "name": "ship-kit",
+  "version": "1.2.0",
+  "description": "Launch-readiness checklist and scanner for AI-built apps.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "scan": "node cli.mjs scan",
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
